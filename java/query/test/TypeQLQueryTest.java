@@ -115,7 +115,7 @@ public class TypeQLQueryTest {
     @Test
     public void testEscapeStrings() {
         assertEquals("insert\n$x \"hello\nworld\";", TypeQL.insert(var("x").eq("hello\nworld")).toString());
-        assertEquals("insert\n$x \"hello\\nworld\";", TypeQL.insert(var("x").eq("hello\\nworld")).toString());
+        assertEquals("insert\n$x \"hello\\\\nworld\";", TypeQL.insert(var("x").eq("hello\\nworld")).toString());
     }
 
     @Test

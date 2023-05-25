@@ -39,12 +39,24 @@ public class Strings {
         return regex.replaceAll("/", "\\\\/");
     }
 
+    public static String unescapeString(String string) {
+        return string.replaceAll("\\\\(.)", "$1");
+    }
+
+    public static String escapeString(String string) {
+        return string.replaceAll("(\\\\|\")", "\\\\$1");
+    }
+
     /**
      * @param string a string to quote and escape
      * @return a string, surrounded with double quotes and escaped
      */
     public static String quoteString(String string) {
         return "\"" + string + "\"";
+    }
+
+    public static String unquoteString(String string) {
+        return string.substring(1, string.length() - 1);
     }
 
     public static String indent(Object object) {

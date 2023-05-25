@@ -58,6 +58,7 @@ import static com.vaticle.typeql.lang.common.exception.ErrorMessage.INVALID_ATTR
 import static com.vaticle.typeql.lang.common.exception.ErrorMessage.INVALID_CASTING;
 import static com.vaticle.typeql.lang.common.exception.ErrorMessage.MISSING_PATTERNS;
 import static com.vaticle.typeql.lang.common.util.Strings.escapeRegex;
+import static com.vaticle.typeql.lang.common.util.Strings.escapeString;
 import static com.vaticle.typeql.lang.common.util.Strings.quoteString;
 import static com.vaticle.typeql.lang.pattern.variable.UnboundVariable.hidden;
 
@@ -387,7 +388,7 @@ public abstract class TypeConstraint extends Constraint<TypeVariable> {
 
         @Override
         public String toString() {
-            return REGEX.toString() + SPACE + quoteString(escapeRegex(regex().pattern()));
+            return REGEX.toString() + SPACE + quoteString(escapeString(escapeRegex(regex().pattern())));
         }
 
         @Override

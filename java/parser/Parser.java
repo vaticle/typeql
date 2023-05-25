@@ -77,6 +77,8 @@ import static com.vaticle.typedb.common.collection.Collections.pair;
 import static com.vaticle.typeql.lang.common.exception.ErrorMessage.ILLEGAL_GRAMMAR;
 import static com.vaticle.typeql.lang.common.exception.ErrorMessage.ILLEGAL_STATE;
 import static com.vaticle.typeql.lang.common.util.Strings.unescapeRegex;
+import static com.vaticle.typeql.lang.common.util.Strings.unescapeString;
+import static com.vaticle.typeql.lang.common.util.Strings.unquoteString;
 import static com.vaticle.typeql.lang.pattern.variable.UnboundVariable.hidden;
 import static java.util.stream.Collectors.toList;
 import static org.antlr.v4.runtime.atn.PredictionMode.LL_EXACT_AMBIG_DETECTION;
@@ -739,7 +741,7 @@ public class Parser extends TypeQLBaseVisitor {
     // LITERAL INPUT VALUES ====================================================
 
     public String getRegex(TerminalNode string) {
-        return unescapeRegex(unquoteString(string));
+        return unescapeRegex(unescapeString(unquoteString(string.getText())));
     }
 
     @Override
@@ -792,13 +794,8 @@ public class Parser extends TypeQLBaseVisitor {
         assert start != null && end != null;
         assert start.equals(TypeQLToken.Char.QUOTE_DOUBLE) || start.equals(TypeQLToken.Char.QUOTE_SINGLE);
         assert end.equals(TypeQLToken.Char.QUOTE_DOUBLE) || end.equals(TypeQLToken.Char.QUOTE_SINGLE);
-
-        // Remove surrounding quotes
-        return unquoteString(string);
-    }
-
-    private String unquoteString(TerminalNode string) {
-        return string.getText().substring(1, string.getText().length() - 1);
+        // Remove surrounding quotes and backslash escapes
+        return unescapeString(unquoteString(str));
     }
 
     private long getLong(TerminalNode number) {
