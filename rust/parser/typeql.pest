@@ -51,9 +51,8 @@ operator_distinct = { DISTINCT ~ SEMICOLON }
 operator_reduce = { REDUCE ~ reduce_assign ~ ( COMMA ~ reduce_assign )* ~ COMMA? ~ ( GROUPBY ~ vars )? ~ SEMICOLON }
 
 var_order = { var ~ ORDER? }
-reduce_assign = { ( reduce_assignment_var ~ ASSIGN ~ reducer ) }
+reduce_assign = { ( var_or_optional ~ ASSIGN ~ reducer ) }
 
-reduce_assignment_var = { var_optional | var }
 reducer = { COUNT ~ ( PAREN_OPEN ~ var ~ PAREN_CLOSE )?
           | reducer_stat ~ PAREN_OPEN ~ var ~ PAREN_CLOSE
           | reducer_collect ~ PAREN_OPEN ~ var ~ PAREN_CLOSE
@@ -75,6 +74,7 @@ pattern_try = { TRY ~ CURLY_OPEN ~ patterns ~ CURLY_CLOSE }
 
 statement = { statement_assignment
             | statement_in
+            | statement_isset
             | statement_thing_basic
             | statement_is
             | statement_type
@@ -125,6 +125,7 @@ role_player = { type_ref_list ~ COLON ~ var
 
 statement_deletable = { HAS? ~ var ~ OF ~ var
                       | LINKS? ~ relation ~ OF ~ var
+                      | statement_isset
                       | var
                       }
 
@@ -133,13 +134,13 @@ pattern_try_deletable = { TRY ~ CURLY_OPEN ~ ( statement_deletable ~ SEMICOLON )
 // SINGLE STATEMENTS ===========================================================
 
 statement_is = { var ~ IS ~ var }
+statement_isset = { ISSET ~ vars }
 statement_comparison = { expression_value ~ comparison }
 statement_assignment = { LET ~ assignment_left ~ ASSIGN ~ expression }
 assignment_left = { vars_assignment | struct_destructor }
 statement_in = { LET ~ vars_assignment ~ IN ~ ( expression_function | expression_list ) }
 
-vars_assignment = { var_assignment ~ ( COMMA ~ var_assignment )* ~ COMMA? }
-var_assignment = { var_optional | var }
+vars_assignment = { var_or_optional ~ ( COMMA ~ var_or_optional )* ~ COMMA? }
 
 comparison = { comparator ~ expression_value }
 comparator = { EQ | NEQ | GTE | GT | LTE | LT | CONTAINS | LIKE }
@@ -149,12 +150,12 @@ comparator = { EQ | NEQ | GTE | GT | LTE | LT | CONTAINS | LIKE }
 expression = { expression_list | expression_value }
 
 expression_value = { expression_base ~ ( expression_operator ~ expression_base )* }
-expression_base = { expression_list_index | expression_parenthesis | expression_function | value_literal | var | label_scoped | label }
+expression_base = { expression_list_index | expression_parenthesis | expression_function | value_literal | var_or_optional | label_scoped | label }
 
 expression_operator = _{ POWER | TIMES | DIVIDE | MODULO | PLUS | MINUS }
 expression_parenthesis = { PAREN_OPEN ~ expression_value ~ PAREN_CLOSE }
 
-expression_list_index = { var ~ list_index }
+expression_list_index = { var_or_optional ~ list_index }
 list_index = { SQ_BRACKET_OPEN ~ expression_value ~ SQ_BRACKET_CLOSE }
 
 expression_function = { expression_function_name ~ PAREN_OPEN ~ expression_arguments? ~ PAREN_CLOSE }
@@ -164,7 +165,7 @@ expression_arguments = { expression ~ ( COMMA ~ expression )* ~ COMMA? }
 
 expression_list = { expression_list_subrange | expression_list_new }
 expression_list_new = { SQ_BRACKET_OPEN ~ expression_value ~ ( COMMA ~ expression_value )* ~ COMMA? ~ SQ_BRACKET_CLOSE }
-expression_list_subrange = { var ~ list_range }
+expression_list_subrange = { var_or_optional ~ list_range }
 list_range = { SQ_BRACKET_OPEN ~ expression_value ~ DOUBLE_DOT ~ expression_value ~ SQ_BRACKET_CLOSE }
 
 expression_struct = { CURLY_OPEN ~ struct_key ~ COLON ~ struct_value ~ CURLY_CLOSE }
@@ -188,8 +189,8 @@ fetch_stream = { expression_function | function_block | query_pipeline | fetch_a
 
 fetch_single = { PAREN_OPEN? ~ ( function_block | fetch_attribute | expression ) ~ PAREN_CLOSE? }
 
-fetch_attribute = { var_named ~ DOT ~ ( label_list | label ) }
-fetch_attributes_all = { var_named ~ DOT ~ STAR }
+fetch_attribute = { var_or_optional ~ DOT ~ ( label_list | label ) }
+fetch_attributes_all = { var_or_optional ~ DOT ~ STAR }
 
 // SCHEMA QUERY ================================================================
 
@@ -311,6 +312,7 @@ iid_value = @{ "0x" ~ ASCII_HEX_DIGIT+ ~ WB }
 vars = { var ~ ( COMMA ~ var )* ~ COMMA? }
 
 var = ${ VAR_ANONYMOUS | var_named }
+var_or_optional = ${ var_optional | var }
 var_optional = ${ var ~ QUESTION }
 
 VAR_ANONYMOUS = @{ "$_" ~ WB }
@@ -492,7 +494,10 @@ ISAX = @{ "isa!" ~ WB }
 LINKS = @{ "links" ~ WB }
 HAS = @{ "has" ~ WB }
 VALUE = @{ "value" ~ WB }
+
+// GENERAL CONSTRAINTS
 IS = @{ "is" ~ WB }
+ISSET = @{ "isset" }
 
 // PATTERN KEYWORDS
 

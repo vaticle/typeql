@@ -10,6 +10,7 @@ use crate::{
     common::{Span, Spanned, token},
     pretty::{Pretty, indent},
     statement::thing::Relation,
+    util::write_joined,
     variable::Variable,
 };
 
@@ -94,6 +95,7 @@ pub enum DeletableKind {
     Links { players: Relation, relation: Variable },
     Concept { variable: Variable },
     Optional { deletables: Vec<Deletable> },
+    IsSet { variables: Vec<Variable> },
 }
 
 impl Pretty for DeletableKind {
@@ -134,6 +136,11 @@ impl fmt::Display for DeletableKind {
                         write!(f, "{}; ", deletable)?;
                     }
                     f.write_char('}')?;
+                    Ok(())
+                }
+                Self::IsSet { variables } => {
+                    write!(f, "{} ", token::Keyword::IsSet)?;
+                    write_joined!(f, ", ", variables)?;
                     Ok(())
                 }
             }

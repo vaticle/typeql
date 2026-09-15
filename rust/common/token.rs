@@ -125,6 +125,7 @@ string_enum! { Keyword
     Is = "is",
     Isa = "isa",
     IsaX = "isa!",
+    IsSet = "isset",
     Label = "label",
     Last = "last",
     Let = "let",

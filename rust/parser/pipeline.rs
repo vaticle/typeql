@@ -13,7 +13,7 @@ use super::{
     literal::{visit_integer_literal, visit_quoted_string_literal},
     statement::{thing::visit_relation, visit_statement},
     type_::{visit_label, visit_label_list},
-    visit_reduce_assignment_var, visit_var, visit_var_named, visit_vars,
+    visit_var, visit_var_or_optional, visit_vars,
 };
 use crate::{
     TypeRef, TypeRefAny,
@@ -22,7 +22,10 @@ use crate::{
         error::TypeQLError,
         token::{Order, ReduceOperatorCollect, ReduceOperatorStat},
     },
-    parser::define::function::{visit_function_block, visit_pipeline_arguments},
+    parser::{
+        define::function::{visit_function_block, visit_pipeline_arguments},
+        statement::single::visit_statement_isset,
+    },
     pattern::{Conjunction, Disjunction, Negation, Optional, Pattern},
     query::{
         Pipeline,
@@ -246,6 +249,10 @@ fn visit_statement_deletable(node: Node<'_>) -> Deletable {
             let relation = visit_var(children.consume_expected(Rule::var));
             DeletableKind::Links { players, relation }
         }
+        Rule::statement_isset => {
+            let variables = visit_statement_isset(children.consume_expected(Rule::statement_isset)).variables;
+            DeletableKind::IsSet { variables }
+        }
         _ => unreachable!("{}", TypeQLError::IllegalGrammar { input: children.as_str().to_owned() }),
     };
     debug_assert_eq!(children.try_consume_any(), None);
@@ -304,7 +311,7 @@ fn visit_fetch_attribute(node: Node<'_>) -> FetchAttribute {
     debug_assert_eq!(node.as_rule(), Rule::fetch_attribute);
     let span = node.span();
     let mut children = node.into_children();
-    let owner = visit_var_named(children.consume_expected(Rule::var_named));
+    let owner = visit_var_or_optional(children.consume_expected(Rule::var_or_optional));
     let child = children.consume_any();
     let attribute = match child.as_rule() {
         Rule::label_list => TypeRefAny::List(visit_label_list(child)),
@@ -332,7 +339,7 @@ fn visit_fetch_object_body(node: Node<'_>) -> FetchObjectBody {
             FetchObjectBody::Entries(entries)
         }
         Rule::fetch_attributes_all => {
-            let var = visit_var_named(child.into_children().consume_expected(Rule::var_named));
+            let var = visit_var_or_optional(child.into_children().consume_expected(Rule::var_or_optional));
             FetchObjectBody::AttributesAll(var)
         }
         _ => unreachable!("{}", TypeQLError::IllegalGrammar { input: child.as_str().to_owned() }),
@@ -413,7 +420,7 @@ fn visit_operator_reduce(node: Node<'_>) -> Reduce {
 pub(super) fn visit_reduce_assign(node: Node<'_>) -> ReduceAssign {
     debug_assert_eq!(node.as_rule(), Rule::reduce_assign);
     let mut children = node.into_children();
-    let variable = visit_reduce_assignment_var(children.consume_expected(Rule::reduce_assignment_var));
+    let variable = visit_var_or_optional(children.consume_expected(Rule::var_or_optional));
     children.consume_expected(Rule::ASSIGN);
     let reducer = visit_reducer(children.consume_expected(Rule::reducer));
     ReduceAssign { variable, reducer }
