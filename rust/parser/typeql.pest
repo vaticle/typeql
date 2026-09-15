@@ -32,11 +32,11 @@ query_stage_terminal = { clause_fetch ~ SEMICOLON }
 
 clause_match = { MATCH ~ patterns }
 
-clause_insert = { INSERT ~ patterns }
-clause_put = { PUT ~ patterns }
-clause_update = { UPDATE ~ patterns }
+clause_insert = { INSERT ~ write_patterns }
+clause_put = { PUT ~ write_patterns }
+clause_update = { UPDATE ~ write_patterns }
 
-clause_delete = { DELETE ~ ( ( statement_deletable | pattern_try_deletable ) ~ SEMICOLON )+ }
+clause_delete = { DELETE ~ ( ( statement_deletable | pattern_if_deletable | pattern_try_deletable ) ~ SEMICOLON )+ }
 
 // STREAM OPERATORS  ===========================================================
 
@@ -51,9 +51,8 @@ operator_distinct = { DISTINCT ~ SEMICOLON }
 operator_reduce = { REDUCE ~ reduce_assign ~ ( COMMA ~ reduce_assign )* ~ COMMA? ~ ( GROUPBY ~ vars )? ~ SEMICOLON }
 
 var_order = { var ~ ORDER? }
-reduce_assign = { ( reduce_assignment_var ~ ASSIGN ~ reducer ) }
+reduce_assign = { ( var_or_optional ~ ASSIGN ~ reducer ) }
 
-reduce_assignment_var = { var_optional | var }
 reducer = { COUNT ~ ( PAREN_OPEN ~ var ~ PAREN_CLOSE )?
           | reducer_stat ~ PAREN_OPEN ~ var ~ PAREN_CLOSE
           | reducer_collect ~ PAREN_OPEN ~ var ~ PAREN_CLOSE
@@ -71,10 +70,17 @@ pattern_disjunction = { CURLY_OPEN ~ patterns ~ CURLY_CLOSE ~ ( OR ~ CURLY_OPEN 
 pattern_negation = { NOT ~ CURLY_OPEN ~ patterns ~ CURLY_CLOSE }
 pattern_try = { TRY ~ CURLY_OPEN ~ patterns ~ CURLY_CLOSE }
 
+write_patterns = { ( write_pattern ~ SEMICOLON )+ }
+write_pattern = { statement | pattern_try | write_pattern_if }
+write_pattern_if = { write_if_clause ~ CURLY_OPEN ~ write_patterns ~ CURLY_CLOSE }
+write_if_clause = { IF ~ CURLY_OPEN ~ ( write_condition ~ SEMICOLON )+ ~ CURLY_CLOSE }
+write_condition = { statement_isset | statement_comparison | var ~ isa_constraint }
+
 // STATEMENTS ==================================================================
 
 statement = { statement_assignment
             | statement_in
+            | statement_isset
             | statement_thing_basic
             | statement_is
             | statement_type
@@ -129,17 +135,18 @@ statement_deletable = { HAS? ~ var ~ OF ~ var
                       }
 
 pattern_try_deletable = { TRY ~ CURLY_OPEN ~ ( statement_deletable ~ SEMICOLON )+ ~ CURLY_CLOSE }
+pattern_if_deletable = { write_if_clause ~ CURLY_OPEN ~ ( statement_deletable ~ SEMICOLON )+ ~ CURLY_CLOSE }
 
 // SINGLE STATEMENTS ===========================================================
 
 statement_is = { var ~ IS ~ var }
+statement_isset = { ISSET ~ vars }
 statement_comparison = { expression_value ~ comparison }
 statement_assignment = { LET ~ assignment_left ~ ASSIGN ~ expression }
 assignment_left = { vars_assignment | struct_destructor }
 statement_in = { LET ~ vars_assignment ~ IN ~ ( expression_function | expression_list ) }
 
-vars_assignment = { var_assignment ~ ( COMMA ~ var_assignment )* ~ COMMA? }
-var_assignment = { var_optional | var }
+vars_assignment = { var_or_optional ~ ( COMMA ~ var_or_optional )* ~ COMMA? }
 
 comparison = { comparator ~ expression_value }
 comparator = { EQ | NEQ | GTE | GT | LTE | LT | CONTAINS | LIKE }
@@ -149,12 +156,12 @@ comparator = { EQ | NEQ | GTE | GT | LTE | LT | CONTAINS | LIKE }
 expression = { expression_list | expression_value }
 
 expression_value = { expression_base ~ ( expression_operator ~ expression_base )* }
-expression_base = { expression_list_index | expression_parenthesis | expression_function | value_literal | var | label_scoped | label }
+expression_base = { expression_list_index | expression_parenthesis | expression_function | value_literal | var_or_optional | label_scoped | label }
 
 expression_operator = _{ POWER | TIMES | DIVIDE | MODULO | PLUS | MINUS }
 expression_parenthesis = { PAREN_OPEN ~ expression_value ~ PAREN_CLOSE }
 
-expression_list_index = { var ~ list_index }
+expression_list_index = { var_or_optional ~ list_index }
 list_index = { SQ_BRACKET_OPEN ~ expression_value ~ SQ_BRACKET_CLOSE }
 
 expression_function = { expression_function_name ~ PAREN_OPEN ~ expression_arguments? ~ PAREN_CLOSE }
@@ -164,7 +171,7 @@ expression_arguments = { expression ~ ( COMMA ~ expression )* ~ COMMA? }
 
 expression_list = { expression_list_subrange | expression_list_new }
 expression_list_new = { SQ_BRACKET_OPEN ~ expression_value ~ ( COMMA ~ expression_value )* ~ COMMA? ~ SQ_BRACKET_CLOSE }
-expression_list_subrange = { var ~ list_range }
+expression_list_subrange = { var_or_optional ~ list_range }
 list_range = { SQ_BRACKET_OPEN ~ expression_value ~ DOUBLE_DOT ~ expression_value ~ SQ_BRACKET_CLOSE }
 
 expression_struct = { CURLY_OPEN ~ struct_key ~ COLON ~ struct_value ~ CURLY_CLOSE }
@@ -188,8 +195,8 @@ fetch_stream = { expression_function | function_block | query_pipeline | fetch_a
 
 fetch_single = { PAREN_OPEN? ~ ( function_block | fetch_attribute | expression ) ~ PAREN_CLOSE? }
 
-fetch_attribute = { var_named ~ DOT ~ ( label_list | label ) }
-fetch_attributes_all = { var_named ~ DOT ~ STAR }
+fetch_attribute = { var_or_optional ~ DOT ~ ( label_list | label ) }
+fetch_attributes_all = { var_or_optional ~ DOT ~ STAR }
 
 // SCHEMA QUERY ================================================================
 
@@ -311,6 +318,7 @@ iid_value = @{ "0x" ~ ASCII_HEX_DIGIT+ ~ WB }
 vars = { var ~ ( COMMA ~ var )* ~ COMMA? }
 
 var = ${ VAR_ANONYMOUS | var_named }
+var_or_optional = ${ var_optional | var }
 var_optional = ${ var ~ QUESTION }
 
 VAR_ANONYMOUS = @{ "$_" ~ WB }
@@ -492,13 +500,17 @@ ISAX = @{ "isa!" ~ WB }
 LINKS = @{ "links" ~ WB }
 HAS = @{ "has" ~ WB }
 VALUE = @{ "value" ~ WB }
+
+// GENERAL CONSTRAINTS
 IS = @{ "is" ~ WB }
+ISSET = @{ "isset" }
 
 // PATTERN KEYWORDS
 
 OR = @{ "or" ~ WB }
 NOT = @{ "not" ~ WB }
 TRY = @{ "try" ~ WB }
+IF = @{ "if" ~ WB }
 
 // COMPARATOR KEYWORDS
 

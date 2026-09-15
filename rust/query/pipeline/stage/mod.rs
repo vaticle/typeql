@@ -25,6 +25,7 @@ pub mod modifier;
 mod put;
 pub mod reduce;
 mod update;
+pub mod write_pattern;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Stage {

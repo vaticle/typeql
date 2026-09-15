@@ -8,18 +8,18 @@ use std::fmt::{self, Write};
 
 use crate::{
     common::{Span, Spanned, token},
-    pattern::Pattern,
     pretty::{Pretty, indent},
+    query::pipeline::stage::write_pattern::WritePattern,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Insert {
     pub span: Option<Span>,
-    pub patterns: Vec<Pattern>,
+    pub patterns: Vec<WritePattern>,
 }
 
 impl Insert {
-    pub(crate) fn new(span: Option<Span>, patterns: Vec<Pattern>) -> Self {
+    pub(crate) fn new(span: Option<Span>, patterns: Vec<WritePattern>) -> Self {
         Self { span, patterns }
     }
 }

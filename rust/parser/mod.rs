@@ -226,6 +226,16 @@ fn visit_var(node: Node<'_>) -> Variable {
     }
 }
 
+fn visit_var_or_optional(node: Node<'_>) -> Variable {
+    debug_assert_eq!(node.as_rule(), Rule::var_or_optional);
+    let child = node.into_child();
+    match child.as_rule() {
+        Rule::var => visit_var(child),
+        Rule::var_optional => visit_var_optional(child),
+        _ => unreachable!("{}", TypeQLError::IllegalGrammar { input: child.as_str().to_owned() }),
+    }
+}
+
 fn visit_var_optional(node: Node<'_>) -> Variable {
     debug_assert_eq!(node.as_rule(), Rule::var_optional);
     let span = node.span();
@@ -253,27 +263,7 @@ fn visit_vars(node: Node<'_>) -> Vec<Variable> {
 
 fn visit_vars_assignment(node: Node<'_>) -> Vec<Variable> {
     debug_assert_eq!(node.as_rule(), Rule::vars_assignment);
-    node.into_children().map(visit_var_assignment).collect()
-}
-
-fn visit_var_assignment(node: Node<'_>) -> Variable {
-    debug_assert_eq!(node.as_rule(), Rule::var_assignment);
-    let child = node.into_child();
-    match child.as_rule() {
-        Rule::var => visit_var(child),
-        Rule::var_optional => visit_var_optional(child),
-        _ => unreachable!("{}", TypeQLError::IllegalGrammar { input: child.as_str().to_owned() }),
-    }
-}
-
-fn visit_reduce_assignment_var(node: Node<'_>) -> Variable {
-    debug_assert_eq!(node.as_rule(), Rule::reduce_assignment_var);
-    let child = node.into_child();
-    match child.as_rule() {
-        Rule::var => visit_var(child),
-        Rule::var_optional => visit_var_optional(child),
-        _ => unreachable!("{}", TypeQLError::IllegalGrammar { input: child.as_str().to_owned() }),
-    }
+    node.into_children().map(visit_var_or_optional).collect()
 }
 
 #[cfg(test)]

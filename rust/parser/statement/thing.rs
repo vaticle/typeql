@@ -67,7 +67,7 @@ fn visit_thing_constraint(node: Node<'_>) -> Constraint {
     }
 }
 
-fn visit_isa_constraint(node: Node<'_>) -> Isa {
+pub(in crate::parser) fn visit_isa_constraint(node: Node<'_>) -> Isa {
     debug_assert_eq!(node.as_rule(), Rule::isa_constraint);
     let span = node.span();
     let mut children = node.into_children();

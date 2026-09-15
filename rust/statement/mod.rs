@@ -4,7 +4,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-use std::{collections::HashMap, fmt};
+use std::{collections::HashMap, fmt, fmt::Write};
 
 use self::comparison::ComparisonStatement;
 pub use self::{thing::Thing, type_::Type};
@@ -181,11 +181,40 @@ impl fmt::Display for Assignment {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct IsSet {
+    pub span: Option<Span>,
+    pub variables: Vec<Variable>,
+}
+
+impl IsSet {
+    pub fn new(span: Option<Span>, variables: Vec<Variable>) -> Self {
+        Self { span, variables }
+    }
+}
+
+impl Spanned for IsSet {
+    fn span(&self) -> Option<Span> {
+        self.span
+    }
+}
+
+impl Pretty for IsSet {}
+
+impl fmt::Display for IsSet {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ", token::Keyword::IsSet)?;
+        write_joined!(f, ", ", self.variables)?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Statement {
     Is(Is),
     InIterable(InIterable),
     Comparison(ComparisonStatement),
     Assignment(Assignment),
+    IsSet(IsSet),
     Thing(Thing),
     Type(Type),
 }
@@ -197,6 +226,7 @@ impl Spanned for Statement {
             Statement::InIterable(inner) => inner.span(),
             Statement::Comparison(inner) => inner.span(),
             Statement::Assignment(inner) => inner.span(),
+            Statement::IsSet(inner) => inner.span(),
             Statement::Thing(inner) => inner.span(),
             Statement::Type(inner) => inner.span(),
         }
@@ -210,6 +240,7 @@ impl Pretty for Statement {
             Statement::InIterable(inner) => Pretty::fmt(inner, indent_level, f),
             Statement::Comparison(inner) => Pretty::fmt(inner, indent_level, f),
             Statement::Assignment(inner) => Pretty::fmt(inner, indent_level, f),
+            Statement::IsSet(inner) => Pretty::fmt(inner, indent_level, f),
             Statement::Thing(inner) => Pretty::fmt(inner, indent_level, f),
             Statement::Type(inner) => Pretty::fmt(inner, indent_level, f),
         }
@@ -223,6 +254,7 @@ impl fmt::Display for Statement {
             Statement::InIterable(inner) => fmt::Display::fmt(inner, f),
             Statement::Comparison(inner) => fmt::Display::fmt(inner, f),
             Statement::Assignment(inner) => fmt::Display::fmt(inner, f),
+            Statement::IsSet(inner) => fmt::Display::fmt(inner, f),
             Statement::Thing(inner) => fmt::Display::fmt(inner, f),
             Statement::Type(inner) => fmt::Display::fmt(inner, f),
         }
